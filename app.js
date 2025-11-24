@@ -493,9 +493,15 @@ async function loadTools(serverId) {
         });
 
         const data = await response.json();
+        console.log('Tools response:', data);
 
         if (data.error) {
-            container.innerHTML = `<div class="error-message">${escapeHtml(data.error)}</div>`;
+            // Check if it's a "Method not found" error (server doesn't support this feature)
+            if (data.error.code === -32601) {
+                container.innerHTML = '<div class="empty-state"><p>Tools not supported by this server</p></div>';
+            } else {
+                container.innerHTML = `<div class="error-message">${escapeHtml(formatError(data.error))}</div>`;
+            }
             return;
         }
 
@@ -506,19 +512,34 @@ async function loadTools(serverId) {
             return;
         }
 
-        container.innerHTML = tools.map(tool => `
-            <div class="list-item">
-                <div class="list-item-header">
-                    <div class="list-item-title">${escapeHtml(tool.name)}</div>
-                    <button class="btn btn-secondary btn-sm" onclick="showToolTest('${serverId}', ${escapeHtml(JSON.stringify(tool))})">Test</button>
+        container.innerHTML = tools.map((tool, index) => {
+            const properties = tool.inputSchema?.properties || {};
+            const required = tool.inputSchema?.required || [];
+            const paramList = Object.entries(properties).map(([name, schema]) => {
+                const isRequired = required.includes(name);
+                const type = schema.type || 'any';
+                const desc = schema.description || '';
+                return `<li><strong>${escapeHtml(name)}</strong>${isRequired ? ' <em>(required)</em>' : ''} - ${escapeHtml(String(type))}${desc ? ': ' + escapeHtml(desc) : ''}</li>`;
+            }).join('');
+
+            // Store tool data in a global map
+            if (!window.toolsData) window.toolsData = {};
+            const toolId = `${serverId}-${tool.name}`;
+            window.toolsData[toolId] = tool;
+
+            return `
+                <div class="list-item">
+                    <div class="list-item-header">
+                        <div class="list-item-title">${escapeHtml(String(tool.name))}</div>
+                        <button class="btn btn-primary btn-sm" onclick="showToolTest('${serverId}', '${tool.name}')">Explore</button>
+                    </div>
+                    ${tool.description ? `<div class="list-item-description">${escapeHtml(String(tool.description))}</div>` : ''}
+                    ${paramList ? `<div class="list-item-meta"><strong>Parameters:</strong><ul style="margin: 0.5rem 0 0 1rem; padding: 0;">${paramList}</ul></div>` : '<div class="list-item-meta">No parameters</div>'}
                 </div>
-                ${tool.description ? `<div class="list-item-description">${escapeHtml(tool.description)}</div>` : ''}
-                <div class="list-item-meta">
-                    ${Object.keys(tool.inputSchema?.properties || {}).length} parameters
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (error) {
+        console.error('loadTools error:', error);
         container.innerHTML = `<div class="error-message">Failed to load tools: ${escapeHtml(error.message)}</div>`;
     }
 }
@@ -535,9 +556,15 @@ async function loadResources(serverId) {
         });
 
         const data = await response.json();
+        console.log('Resources response:', data);
 
         if (data.error) {
-            container.innerHTML = `<div class="error-message">${escapeHtml(data.error)}</div>`;
+            // Check if it's a "Method not found" error (server doesn't support this feature)
+            if (data.error.code === -32601) {
+                container.innerHTML = '<div class="empty-state"><p>Resources not supported by this server</p></div>';
+            } else {
+                container.innerHTML = `<div class="error-message">${escapeHtml(formatError(data.error))}</div>`;
+            }
             return;
         }
 
@@ -548,17 +575,24 @@ async function loadResources(serverId) {
             return;
         }
 
-        container.innerHTML = resources.map(resource => `
-            <div class="list-item">
-                <div class="list-item-header">
-                    <div class="list-item-title">${escapeHtml(resource.name || resource.uri)}</div>
-                    <button class="btn btn-secondary btn-sm" onclick="readResource('${serverId}', '${escapeHtml(resource.uri)}')">Read</button>
+        container.innerHTML = resources.map(resource => {
+            const name = String(resource.name || resource.uri || 'Unknown');
+            const uri = String(resource.uri || '');
+            const description = resource.description ? String(resource.description) : '';
+
+            return `
+                <div class="list-item">
+                    <div class="list-item-header">
+                        <div class="list-item-title">${escapeHtml(name)}</div>
+                        <button class="btn btn-secondary btn-sm" onclick="readResource('${serverId}', ${JSON.stringify(uri)})">Read</button>
+                    </div>
+                    ${description ? `<div class="list-item-description">${escapeHtml(description)}</div>` : ''}
+                    <div class="list-item-meta">${escapeHtml(uri)}</div>
                 </div>
-                ${resource.description ? `<div class="list-item-description">${escapeHtml(resource.description)}</div>` : ''}
-                <div class="list-item-meta">${escapeHtml(resource.uri)}</div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (error) {
+        console.error('loadResources error:', error);
         container.innerHTML = `<div class="error-message">Failed to load resources: ${escapeHtml(error.message)}</div>`;
     }
 }
@@ -575,9 +609,15 @@ async function loadPrompts(serverId) {
         });
 
         const data = await response.json();
+        console.log('Prompts response:', data);
 
         if (data.error) {
-            container.innerHTML = `<div class="error-message">${escapeHtml(data.error)}</div>`;
+            // Check if it's a "Method not found" error (server doesn't support this feature)
+            if (data.error.code === -32601) {
+                container.innerHTML = '<div class="empty-state"><p>Prompts not supported by this server</p></div>';
+            } else {
+                container.innerHTML = `<div class="error-message">${escapeHtml(formatError(data.error))}</div>`;
+            }
             return;
         }
 
@@ -588,16 +628,22 @@ async function loadPrompts(serverId) {
             return;
         }
 
-        container.innerHTML = prompts.map(prompt => `
-            <div class="list-item">
-                <div class="list-item-header">
-                    <div class="list-item-title">${escapeHtml(prompt.name)}</div>
+        container.innerHTML = prompts.map(prompt => {
+            const name = String(prompt.name || 'Unknown');
+            const description = prompt.description ? String(prompt.description) : '';
+
+            return `
+                <div class="list-item">
+                    <div class="list-item-header">
+                        <div class="list-item-title">${escapeHtml(name)}</div>
+                    </div>
+                    ${description ? `<div class="list-item-description">${escapeHtml(description)}</div>` : ''}
+                    ${prompt.arguments?.length ? `<div class="list-item-meta">${prompt.arguments.length} arguments</div>` : ''}
                 </div>
-                ${prompt.description ? `<div class="list-item-description">${escapeHtml(prompt.description)}</div>` : ''}
-                ${prompt.arguments?.length ? `<div class="list-item-meta">${prompt.arguments.length} arguments</div>` : ''}
-            </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (error) {
+        console.error('loadPrompts error:', error);
         container.innerHTML = `<div class="error-message">Failed to load prompts: ${escapeHtml(error.message)}</div>`;
     }
 }
@@ -614,9 +660,10 @@ async function loadServerInfo(serverId) {
         });
 
         const data = await response.json();
+        console.log('Server Info response:', data);
 
         if (data.error) {
-            container.innerHTML = `<div class="error-message">${escapeHtml(data.error)}</div>`;
+            container.innerHTML = `<div class="error-message">${escapeHtml(formatError(data.error))}</div>`;
             return;
         }
 
@@ -633,6 +680,7 @@ async function loadServerInfo(serverId) {
             </div>
         `;
     } catch (error) {
+        console.error('loadServerInfo error:', error);
         container.innerHTML = `<div class="error-message">Failed to load server info: ${escapeHtml(error.message)}</div>`;
     }
 }
@@ -704,43 +752,88 @@ async function disconnectServer(serverId) {
     }
 }
 
-function showToolTest(serverId, tool) {
-    const toolData = typeof tool === 'string' ? JSON.parse(tool) : tool;
-    const container = document.getElementById(`tools-list-${serverId}`);
+function showToolTest(serverId, toolName) {
+    const toolId = `${serverId}-${toolName}`;
+    const toolData = window.toolsData?.[toolId];
 
-    // Check if test form already exists
-    let testForm = container.querySelector(`#test-form-${serverId}-${toolData.name}`);
-    if (testForm) {
-        testForm.remove();
+    if (!toolData) {
+        console.error('Tool not found:', toolId);
         return;
     }
 
-    // Create test form
-    const formHtml = `
-        <div class="tool-test-form" id="test-form-${serverId}-${toolData.name}">
-            <h5 style="margin-bottom: 0.75rem; font-size: 0.938rem;">Test: ${escapeHtml(toolData.name)}</h5>
-            <div class="form-group">
-                <label>Arguments (JSON)</label>
-                <textarea id="tool-args-${serverId}-${toolData.name}" placeholder='{"param": "value"}'>${JSON.stringify(toolData.inputSchema?.properties || {}, null, 2)}</textarea>
+    // Build form fields for each parameter
+    const properties = toolData.inputSchema?.properties || {};
+    const required = toolData.inputSchema?.required || [];
+
+    let formFields = '';
+    for (const [name, schema] of Object.entries(properties)) {
+        const isRequired = required.includes(name);
+        const type = schema.type || 'string';
+        const desc = schema.description || '';
+        const placeholder = desc || `Enter ${name}`;
+
+        formFields += `
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">${escapeHtml(name)}${isRequired ? ' <em style="color: #dc3545;">(required)</em>' : ''}</label>
+                <input type="text" id="tool-param-${serverId}-${toolData.name}-${name}"
+                       placeholder="${escapeHtml(placeholder)}"
+                       style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.875rem;">
+                <small style="color: #666; display: block; margin-top: 0.25rem;">${escapeHtml(String(type))}${desc ? ': ' + escapeHtml(desc) : ''}</small>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="executeTool('${serverId}', '${escapeHtml(toolData.name)}')">Execute</button>
-            <div id="tool-result-${serverId}-${toolData.name}"></div>
+        `;
+    }
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;';
+    modal.id = `modal-${serverId}-${toolData.name}`;
+
+    const content = document.createElement('div');
+    content.style.cssText = 'background: white; padding: 2rem; border-radius: 8px; max-width: 600px; width: 100%; max-height: 90vh; overflow: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+
+    content.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="margin: 0;">${escapeHtml(toolData.name)}</h3>
+            <button onclick="this.closest('[id^=modal-]').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
         </div>
+        ${toolData.description ? `<p style="color: #666; margin-bottom: 1.5rem;">${escapeHtml(toolData.description)}</p>` : ''}
+        <form id="test-form-${serverId}-${toolData.name}" onsubmit="event.preventDefault(); executeTool('${serverId}', '${escapeHtml(toolData.name)}')">
+            ${formFields || '<p style="color: #666;">No parameters required</p>'}
+            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">Execute</button>
+                <button type="button" class="btn btn-secondary" onclick="this.closest('[id^=modal-]').remove()">Cancel</button>
+            </div>
+        </form>
+        <div id="tool-result-${serverId}-${toolData.name}" style="margin-top: 1.5rem;"></div>
     `;
 
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = formHtml;
-    container.insertBefore(tempDiv.firstElementChild, container.firstChild);
+    modal.appendChild(content);
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    document.body.appendChild(modal);
 }
 
 async function executeTool(serverId, toolName) {
-    const argsTextarea = document.getElementById(`tool-args-${serverId}-${toolName}`);
     const resultDiv = document.getElementById(`tool-result-${serverId}-${toolName}`);
+    const testForm = document.getElementById(`test-form-${serverId}-${toolName}`);
 
     resultDiv.innerHTML = '<div class="loading">Executing...</div>';
 
     try {
-        const args = JSON.parse(argsTextarea.value);
+        // Gather parameter values from input fields
+        const args = {};
+        const inputs = testForm.querySelectorAll('[id^="tool-param-"]');
+        inputs.forEach(input => {
+            const paramName = input.id.split('-').pop();
+            const value = input.value.trim();
+            if (value) {
+                // Try to parse as number if it looks like a number
+                if (!isNaN(value) && value !== '') {
+                    args[paramName] = Number(value);
+                } else {
+                    args[paramName] = value;
+                }
+            }
+        });
 
         const response = await fetch(`${API_BASE}/tools/call`, {
             method: 'POST',
@@ -753,16 +846,152 @@ async function executeTool(serverId, toolName) {
         });
 
         const data = await response.json();
+        console.log('Tool execution result:', data);
 
-        resultDiv.innerHTML = `
-            <div class="test-result">
-                <pre>${JSON.stringify(data, null, 2)}</pre>
-            </div>
-        `;
+        // Format the result nicely
+        let resultHtml = '';
+        if (data.error) {
+            resultHtml = `<div class="error-message">${escapeHtml(formatError(data.error))}</div>`;
+        } else if (data.result) {
+            // Check if this is a workflow search result
+            if (toolName === 'search_workflows' && data.result.content) {
+                const content = data.result.content;
+                if (Array.isArray(content) && content[0]?.type === 'text') {
+                    try {
+                        const parsed = JSON.parse(content[0].text);
+                        if (parsed.data && Array.isArray(parsed.data)) {
+                            resultHtml = `
+                                <div style="background: white; padding: 1rem; margin-top: 1rem; border-radius: 4px; border: 1px solid #dee2e6;">
+                                    <h6 style="margin-bottom: 1rem;">Found ${parsed.count} workflow(s)</h6>
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <thead>
+                                            <tr style="border-bottom: 2px solid #dee2e6;">
+                                                <th style="text-align: left; padding: 0.5rem;">Name</th>
+                                                <th style="text-align: left; padding: 0.5rem;">Description</th>
+                                                <th style="text-align: center; padding: 0.5rem;">Active</th>
+                                                <th style="text-align: left; padding: 0.5rem;">ID</th>
+                                                <th style="text-align: center; padding: 0.5rem;">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${parsed.data.map(wf => `
+                                                <tr style="border-bottom: 1px solid #eee;">
+                                                    <td style="padding: 0.75rem;"><strong>${escapeHtml(wf.name || 'Unnamed')}</strong></td>
+                                                    <td style="padding: 0.75rem;"><small>${escapeHtml(wf.description || 'No description')}</small></td>
+                                                    <td style="padding: 0.75rem; text-align: center;">${wf.active ? '✓' : '✗'}</td>
+                                                    <td style="padding: 0.75rem;"><code style="font-size: 0.85em;">${escapeHtml(wf.id)}</code></td>
+                                                    <td style="padding: 0.75rem; text-align: center;">
+                                                        <button class="btn btn-primary btn-sm" onclick="window.getWorkflowDetails('${serverId}', '${wf.id}')">Details</button>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            `;
+                        } else {
+                            resultHtml = `<div class="test-result"><pre>${escapeHtml(content[0].text)}</pre></div>`;
+                        }
+                    } catch (e) {
+                        resultHtml = `<div class="test-result"><pre>${escapeHtml(content[0].text)}</pre></div>`;
+                    }
+                } else {
+                    resultHtml = `<div class="test-result"><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                }
+            } else {
+                resultHtml = `<div class="test-result"><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+            }
+        } else {
+            resultHtml = `<div class="test-result"><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+        }
+
+        resultDiv.innerHTML = resultHtml;
     } catch (error) {
+        console.error('executeTool error:', error);
         resultDiv.innerHTML = `<div class="error-message">Error: ${escapeHtml(error.message)}</div>`;
     }
 }
+
+async function getWorkflowDetails(serverId, workflowId) {
+    try {
+        const response = await fetch(`${API_BASE}/tools/call`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                connectionId: serverId,
+                toolName: 'get_workflow_details',
+                arguments: { workflowId }
+            })
+        });
+
+        const data = await response.json();
+        console.log('Workflow details:', data);
+
+        // Show results in a modal-style overlay
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+
+        const content = document.createElement('div');
+        content.style.cssText = 'background: white; padding: 2rem; border-radius: 8px; max-width: 800px; max-height: 80vh; overflow: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+
+        if (data.error) {
+            content.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0;">Error</h3>
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+                </div>
+                <p>${escapeHtml(formatError(data.error))}</p>
+            `;
+        } else if (data.result?.content?.[0]?.text) {
+            try {
+                const details = JSON.parse(data.result.content[0].text);
+                content.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="margin: 0;">${escapeHtml(details.workflow?.name || 'Workflow Details')}</h3>
+                        <button onclick="this.closest('[style*=fixed]').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+                    </div>
+                    <p><strong>ID:</strong> <code>${escapeHtml(workflowId)}</code></p>
+                    <p><strong>Active:</strong> ${details.workflow?.active ? 'Yes ✓' : 'No ✗'}</p>
+                    <p><strong>Trigger Count:</strong> ${details.workflow?.triggerCount || 0}</p>
+                    <hr>
+                    <h4>How to Trigger:</h4>
+                    <p>${escapeHtml(details.triggerInfo || 'No trigger info available')}</p>
+                    <hr>
+                    <h4>Full Details:</h4>
+                    <pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow: auto; max-height: 300px;">${JSON.stringify(details, null, 2)}</pre>
+                `;
+            } catch (e) {
+                content.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="margin: 0;">Workflow Details</h3>
+                        <button onclick="this.closest('[style*=fixed]').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+                    </div>
+                    <pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow: auto;">${JSON.stringify(data, null, 2)}</pre>
+                `;
+            }
+        } else {
+            content.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0;">Workflow Details</h3>
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+                </div>
+                <pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow: auto;">${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+
+        modal.appendChild(content);
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+        document.body.appendChild(modal);
+    } catch (error) {
+        console.error('getWorkflowDetails error:', error);
+        alert('Error getting workflow details: ' + error.message);
+    }
+}
+
+// Make functions globally accessible
+window.getWorkflowDetails = getWorkflowDetails;
+window.executeTool = executeTool;
+window.showToolTest = showToolTest;
 
 async function readResource(serverId, uri) {
     const container = document.getElementById(`resources-list-${serverId}`);
@@ -808,37 +1037,64 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function formatError(error) {
+    if (typeof error === 'string') {
+        return error;
+    }
+    if (typeof error === 'object' && error !== null) {
+        // JSON-RPC error object
+        if (error.message) {
+            return `${error.message}${error.code ? ` (Code: ${error.code})` : ''}`;
+        }
+        return JSON.stringify(error);
+    }
+    return String(error);
+}
+
 function loadSavedConfigs() {
     const configs = loadServerConfigs();
     if (configs.length === 0) return;
 
-    // Add a "Saved Configurations" section above the add server section
-    const main = document.querySelector('main');
+    // Find the connect button container
     const addServerSection = document.querySelector('.add-server-section');
+    const connectBtn = document.getElementById('connectBtn');
 
+    if (!connectBtn) return;
+
+    // Create saved configs section that goes BEFORE the connect button
     const savedConfigsHtml = `
-        <section class="card saved-configs-section">
-            <h2>Saved Configurations</h2>
-            <div class="saved-configs-list">
-                ${configs.map(config => `
-                    <div class="saved-config-item" data-name="${escapeHtml(config.name)}">
-                        <div class="config-info">
-                            <strong>${escapeHtml(config.name)}</strong>
-                            <span class="config-meta">${config.type.toUpperCase()} - ${config.type === 'sse' ? escapeHtml(config.url || '') : (config.endpoint ? escapeHtml(config.endpoint) : escapeHtml(config.command || ''))}</span>
-                        </div>
-                        <div class="config-actions">
-                            <button class="btn btn-secondary btn-sm" onclick="loadConfig('${escapeHtml(config.name)}')">Load</button>
-                            <button class="btn btn-secondary btn-sm" onclick="deleteConfig('${escapeHtml(config.name)}')">Delete</button>
-                        </div>
+        <div class="form-group" id="savedConfigsSection" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #dee2e6;">
+            <label>Or select a saved configuration:</label>
+            <div class="saved-configs-radio" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <label class="radio-label" style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 4px; cursor: pointer;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="radio" name="savedConfig" value="" checked>
+                        <span style="font-weight: 500;">New Configuration</span>
                     </div>
+                </label>
+                ${configs.map(config => `
+                    <label class="radio-label" style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 4px; cursor: pointer;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                            <input type="radio" name="savedConfig" value="${escapeHtml(config.name)}" onchange="loadConfig('${escapeHtml(config.name)}')">
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-weight: 500;">${escapeHtml(config.name)}</span>
+                                <small style="color: #666;">${config.type.toUpperCase()} - ${config.type === 'sse' ? escapeHtml(config.url || '') : (config.endpoint ? escapeHtml(config.endpoint) : escapeHtml(config.command || ''))}</small>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); deleteConfig('${escapeHtml(config.name)}')" style="margin-left: 1rem;">Delete</button>
+                    </label>
                 `).join('')}
             </div>
-        </section>
+        </div>
+        <div style="margin-top: 1.5rem;"></div>
     `;
 
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = savedConfigsHtml;
-    main.insertBefore(tempDiv.firstElementChild, addServerSection);
+
+    // Insert before the connect button
+    connectBtn.parentElement.insertBefore(tempDiv.firstChild, connectBtn);
+    connectBtn.parentElement.insertBefore(tempDiv.firstChild, connectBtn); // Insert spacing div too
 }
 
 window.loadConfig = function(name) {

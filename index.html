@@ -23,20 +23,20 @@
                     <label>Connection Type</label>
                     <div class="radio-group">
                         <label class="radio-label">
-                            <input type="radio" name="connectionType" value="sse" checked>
-                            <span>SSE (HTTP)</span>
+                            <input type="radio" name="connectionType" value="stdio" checked>
+                            <span>Stdio (Process)</span>
                             <span class="badge">Recommended</span>
                         </label>
                         <label class="radio-label">
-                            <input type="radio" name="connectionType" value="stdio">
-                            <span>Stdio (Process)</span>
-                            <span class="badge secondary">Legacy</span>
+                            <input type="radio" name="connectionType" value="sse">
+                            <span>SSE (HTTP)</span>
+                            <span class="badge secondary">Deprecated</span>
                         </label>
                     </div>
                 </div>
 
                 <!-- SSE Form -->
-                <div id="sseForm" class="connection-form">
+                <div id="sseForm" class="connection-form" style="display: none;">
                     <div class="form-group">
                         <label for="serverName">Server Name</label>
                         <input type="text" id="serverName" placeholder="My MCP Server" />
@@ -74,7 +74,7 @@
                 </div>
 
                 <!-- Stdio Form -->
-                <div id="stdioForm" class="connection-form" style="display: none;">
+                <div id="stdioForm" class="connection-form">
                     <div class="form-group">
                         <label for="stdioName">Server Name</label>
                         <input type="text" id="stdioName" placeholder="My MCP Server" />
@@ -160,7 +160,7 @@
                     </details>
                 </div>
 
-                <button id="connectBtn" class="btn btn-primary">Connect to Server</button>
+                <button id="connectBtn" class="btn btn-primary" style="margin-top: 1.5rem;">Connect to Server</button>
                 <div id="connectionStatus" class="status-message"></div>
             </section>
 

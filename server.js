@@ -177,18 +177,24 @@ async function sendMcpRequest(connection, method, params = {}) {
         reject(error);
       }
     } else if (connection.type === 'stdio') {
+      let onData;
       const timeout = setTimeout(() => {
+        if (onData) {
+          connection.process.stdout.removeListener('data', onData);
+        }
         reject(new Error('Request timeout'));
       }, 10000);
 
-      const onData = (data) => {
-        clearTimeout(timeout);
+      onData = (data) => {
         try {
           const lines = data.toString().split('\n').filter(line => line.trim());
           for (const line of lines) {
             try {
               const response = JSON.parse(line);
+              // Accept response with matching ID (includes both result and error)
+              // or matching method for notifications
               if (response.id === request.id || response.method === method) {
+                clearTimeout(timeout);
                 connection.process.stdout.removeListener('data', onData);
                 resolve(response);
                 return;
@@ -198,6 +204,7 @@ async function sendMcpRequest(connection, method, params = {}) {
             }
           }
         } catch (error) {
+          clearTimeout(timeout);
           connection.process.stdout.removeListener('data', onData);
           reject(error);
         }
@@ -256,8 +263,10 @@ app.post('/api/tools/list', async (req, res) => {
     }
 
     const response = await sendMcpRequest(connection, 'tools/list');
+    console.log('tools/list response:', JSON.stringify(response, null, 2));
     res.json(response);
   } catch (error) {
+    console.error('tools/list error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -273,8 +282,10 @@ app.post('/api/resources/list', async (req, res) => {
     }
 
     const response = await sendMcpRequest(connection, 'resources/list');
+    console.log('resources/list response:', JSON.stringify(response, null, 2));
     res.json(response);
   } catch (error) {
+    console.error('resources/list error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -290,8 +301,10 @@ app.post('/api/prompts/list', async (req, res) => {
     }
 
     const response = await sendMcpRequest(connection, 'prompts/list');
+    console.log('prompts/list response:', JSON.stringify(response, null, 2));
     res.json(response);
   } catch (error) {
+    console.error('prompts/list error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -311,8 +324,10 @@ app.post('/api/server/info', async (req, res) => {
       capabilities: {},
       clientInfo: { name: 'mcp-tester', version: '1.0.0' }
     });
+    console.log('server/info response:', JSON.stringify(response, null, 2));
     res.json(response);
   } catch (error) {
+    console.error('server/info error:', error);
     res.status(500).json({ error: error.message });
   }
 });
