@@ -70,7 +70,7 @@ node server.js 3032
 **Example with Bearer Token:**
 ```
 Server Name: n8n MCP Server
-Server URL: https://auto.cnxlab.us/mcp-server/http
+Server URL: https://yourdomain.com/mcp-server/http
 Auth Type: Bearer Token
 Token: your_access_token_here
 ```
@@ -96,7 +96,7 @@ Token: your_access_token_here
         "-y",
         "supergateway",
         "--streamableHttp",
-        "https://auto.cnxlab.us/mcp-server/http",
+        "https://yourdomain.com/mcp-server/http",
         "--header",
         "authorization:Bearer YOUR_ACCESS_TOKEN"
       ]
@@ -107,7 +107,7 @@ Token: your_access_token_here
 
 In the UI, enter:
 - Command: `npx`
-- Arguments: `-y, supergateway, --streamableHttp, https://auto.cnxlab.us/mcp-server/http, --header, authorization:Bearer YOUR_ACCESS_TOKEN`
+- Arguments: `-y, supergateway, --streamableHttp, https://yourdomain.com/mcp-server/http, --header, authorization:Bearer YOUR_ACCESS_TOKEN`
 
 ## Configuration Storage
 
