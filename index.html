@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Server Tester</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MCP Server Tester</h1>
+            <p class="subtitle">Test and validate Model Context Protocol servers</p>
+        </header>
+
+        <main>
+            <!-- Add Server Section -->
+            <section class="card add-server-section">
+                <h2>Add MCP Server</h2>
+
+                <div class="form-group">
+                    <label>Connection Type</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="connectionType" value="sse" checked>
+                            <span>SSE (HTTP)</span>
+                            <span class="badge">Recommended</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="connectionType" value="stdio">
+                            <span>Stdio (Process)</span>
+                            <span class="badge secondary">Legacy</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- SSE Form -->
+                <div id="sseForm" class="connection-form">
+                    <div class="form-group">
+                        <label for="serverName">Server Name</label>
+                        <input type="text" id="serverName" placeholder="My MCP Server" />
+                    </div>
+                    <div class="form-group">
+                        <label for="sseUrl">Server URL</label>
+                        <input type="text" id="sseUrl" placeholder="https://yourserver.com/mcp" />
+                    </div>
+
+                    <details class="auth-section">
+                        <summary>Authentication (Optional)</summary>
+                        <div class="auth-content">
+                            <div class="form-group">
+                                <label for="sseAuthType">Auth Type</label>
+                                <select id="sseAuthType" class="auth-type-select">
+                                    <option value="none">None</option>
+                                    <option value="bearer">Bearer Token</option>
+                                    <option value="custom">Custom Headers</option>
+                                </select>
+                            </div>
+                            <div id="sseBearerAuth" class="auth-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label for="sseBearerToken">Bearer Token</label>
+                                    <input type="password" id="sseBearerToken" placeholder="your_access_token_here" />
+                                </div>
+                            </div>
+                            <div id="sseCustomAuth" class="auth-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label for="sseHeaders">Custom Headers (JSON)</label>
+                                    <textarea id="sseHeaders" rows="4" placeholder='{"Authorization": "Bearer token", "X-API-Key": "key"}'></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <!-- Stdio Form -->
+                <div id="stdioForm" class="connection-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="stdioName">Server Name</label>
+                        <input type="text" id="stdioName" placeholder="My MCP Server" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="stdioCommand">Command</label>
+                        <select id="stdioCommand">
+                            <option value="npx">npx</option>
+                            <option value="node">node</option>
+                            <option value="python">python</option>
+                            <option value="python3">python3</option>
+                            <option value="custom">Custom...</option>
+                        </select>
+                        <input type="text" id="stdioCommandCustom" style="display: none; margin-top: 0.5rem;" placeholder="Enter custom command" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="stdioPackage">Package/Script</label>
+                        <select id="stdioPackage">
+                            <option value="">-- Select Package --</option>
+                            <option value="-y supergateway">supergateway</option>
+                            <option value="-y @modelcontextprotocol/server-filesystem">filesystem</option>
+                            <option value="-y @modelcontextprotocol/server-github">github</option>
+                            <option value="-y @modelcontextprotocol/server-postgres">postgres</option>
+                            <option value="-y @modelcontextprotocol/server-sqlite">sqlite</option>
+                            <option value="-y @modelcontextprotocol/server-memory">memory</option>
+                            <option value="custom">Custom...</option>
+                        </select>
+                        <input type="text" id="stdioPackageCustom" style="display: none; margin-top: 0.5rem;" placeholder="Enter package name or script path" />
+                        <small class="helper-text">Common MCP packages or enter custom value</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="stdioTransport">Transport Type</label>
+                        <select id="stdioTransport">
+                            <option value="streamableHttp">Streamable HTTP</option>
+                            <option value="stdio">Direct Stdio</option>
+                        </select>
+                    </div>
+
+                    <div id="stdioHttpFields">
+                        <div class="form-group">
+                            <label for="stdioEndpoint">HTTP Endpoint</label>
+                            <input type="text" id="stdioEndpoint" placeholder="https://yourserver.com/mcp-server/http" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="stdioAuthType">Authentication</label>
+                            <select id="stdioAuthType">
+                                <option value="none">None</option>
+                                <option value="bearer">Bearer Token</option>
+                                <option value="apikey">API Key</option>
+                            </select>
+                        </div>
+
+                        <div id="stdioBearerField" class="form-group" style="display: none;">
+                            <label for="stdioBearer">Bearer Token</label>
+                            <input type="password" id="stdioBearer" placeholder="Your access token" />
+                        </div>
+
+                        <div id="stdioApiKeyField" class="form-group" style="display: none;">
+                            <label for="stdioApiKeyName">API Key Header Name</label>
+                            <input type="text" id="stdioApiKeyName" placeholder="X-API-Key" />
+                            <label for="stdioApiKeyValue">API Key Value</label>
+                            <input type="password" id="stdioApiKeyValue" placeholder="Your API key" />
+                        </div>
+                    </div>
+
+                    <details class="auth-section">
+                        <summary>Advanced Options</summary>
+                        <div class="auth-content">
+                            <div class="form-group">
+                                <label for="stdioExtraArgs">Extra Arguments (optional)</label>
+                                <textarea id="stdioExtraArgs" rows="3" placeholder="--flag&#10;--option value"></textarea>
+                                <small class="helper-text">Additional arguments, one per line</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="stdioEnv">Environment Variables (JSON)</label>
+                                <textarea id="stdioEnv" rows="4" placeholder='{"API_KEY": "your_key"}'></textarea>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <button id="connectBtn" class="btn btn-primary">Connect to Server</button>
+                <div id="connectionStatus" class="status-message"></div>
+            </section>
+
+            <!-- Connected Servers Section -->
+            <section class="connected-servers-section">
+                <h2>Connected Servers</h2>
+                <div id="serversList" class="servers-list">
+                    <div class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                        </svg>
+                        <p>No servers connected yet</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
